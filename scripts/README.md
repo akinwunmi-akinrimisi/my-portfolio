@@ -41,8 +41,19 @@ cd scripts && TARGET=https://akinwunmi-akinrimisi.netlify.app node mobile-audit.
 | `marquee.mjs` | Samples the hero marquee transform over time to prove it is moving; checks card hover lift and spotlight vars. |
 | `light.mjs` | Computes WCAG contrast ratios for the accent tokens against the light canvas. |
 | `dup.mjs` | After prerendering, proves React replaced the baked markup instead of appending to it: counts `h1`, nav, cards, reveals. |
+| `csp-test.mjs` | **Run after any change adding a script, style, image source or external link.** Fails loudly on any CSP violation, console error, or third-party request. |
+| `scan-secrets.mjs` | Scans *staged* blobs for credentials. Runs automatically from `.githooks/pre-commit`; also `npm run scan`. |
+| `gen-headers.mjs` | Generates `dist/_headers`, `vercel.json` and `dist/vercel.json`. Runs in `npm run build`. `--check` (via `npm run verify:headers`) fails if the committed `vercel.json` has drifted. |
+| `fetch-fonts.mjs` | Re-downloads the self-hosted webfonts. Only needed when the font list changes. |
 | `images.py` | Regenerates `public/akin-*.webp|jpg` and the OG card from `akin.png`. Run after changing the photo or the palette. |
 | `prerender.mjs` | **Runs automatically as part of `npm run build`** — see below. |
+
+## Verifying a secret scanner
+
+`scan-secrets.mjs` has a failure mode worth knowing: **a scanner that silently does
+nothing reports "clean" identically to one that works.** After editing it, prove it
+still detects something — plant a file containing a real token, stage it, confirm the
+scanner exits non-zero, then remove the file. Do not skip this.
 
 ## prerender.mjs
 
