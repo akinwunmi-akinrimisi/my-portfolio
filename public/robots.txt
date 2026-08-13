@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Build artefacts carry content-hashed names and have no standalone value in search.
+Disallow: /assets/
+
+Sitemap: https://akinwunmi-akinrimisi.netlify.app/sitemap.xml
