@@ -4,7 +4,7 @@ export const profile = {
   monogram: 'AA',
   role: 'Cloud DevOps Engineer · AI Automation Architect',
   location: 'Lagos, Nigeria — working across WAT, GMT and EST',
-  availability: 'Available for automation & cloud engagements',
+  availability: 'Available for automation engagements',
   email: 'akinolaakinrimisi@gmail.com',
   linkedin: 'https://www.linkedin.com/in/akinwunmi-akinrimisi-1397a4139/',
   github: 'https://github.com/akinwunmi-akinrimisi?tab=repositories',
@@ -15,6 +15,12 @@ export const profile = {
     webp1280: '/akin-1280.webp',
     jpg: '/akin-960.jpg',
   },
+  // The two labels floating beside the hero portrait. Kept short — they sit
+  // over the photo edge on narrow screens and wrap badly past ~18 characters.
+  photoChips: [
+    { icon: 'bolt', label: 'Shipped', value: '40+ workflows' },
+    { icon: 'cloud', label: 'AWS', value: 'Certified ×3' },
+  ],
   headline: ['I build systems that', 'run the business', 'while you sleep.'],
   headlineAccentLine: 1,
   subline:
@@ -337,7 +343,7 @@ export const education = [
 export const certifications = [
   { name: 'AWS Solutions Architect — Associate', status: 'Certified' },
   { name: 'AWS Developer — Associate', status: 'Certified' },
-  { name: 'AWS DevOps Engineer — Professional', status: 'In view' },
+  { name: 'AWS DevOps Engineer — Professional', status: 'Certified' },
 ] as const
 
 export const contact = {

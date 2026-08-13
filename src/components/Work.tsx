@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { projects, type Project } from '../content'
-import { useReveal } from '../hooks'
+import { useReveal, useScrollStack } from '../hooks'
 import { Chip, FlowStrip, SectionHeading } from './primitives'
 
 function DetailList({ title, items }: { title: string; items: string[] }) {
@@ -29,7 +29,12 @@ function ProjectCard({ project }: { project: Project }) {
   const panelId = `${project.id}-detail`
 
   return (
-    <article className="reveal card card-hover spotlight overflow-hidden">
+    <article
+      // Read by the stylesheet, not by React: an expanded card leaves the
+      // pinned stack so its detail panel stays reachable.
+      data-detail-open={open}
+      className="card card-hover spotlight overflow-hidden"
+    >
       <div className="p-6 sm:p-8">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
           <span className="font-mono text-xs gradient-text font-medium">{project.index}</span>
@@ -113,7 +118,11 @@ function ProjectCard({ project }: { project: Project }) {
 }
 
 export function Work() {
+  // The heading reveals once and stays; the five cards are pinned into a deck
+  // by useScrollStack and are deliberately not reveal targets — a card that
+  // spends most of its life buried should not also fade in.
   const ref = useReveal<HTMLElement>()
+  useScrollStack(ref)
 
   return (
     <section ref={ref} id="work" className="relative py-24 sm:py-32">
@@ -128,9 +137,11 @@ export function Work() {
           lead="Each of these started as something a person did on a schedule. Every one now runs unattended, reports its own failures, and is documented well enough that it does not need me."
         />
 
-        <div className="mt-14 space-y-6">
+        <div className="stack mt-14">
           {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <div key={project.id} className="stack-item">
+              <ProjectCard project={project} />
+            </div>
           ))}
         </div>
       </div>

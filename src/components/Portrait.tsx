@@ -1,78 +1,106 @@
 import { profile } from '../content'
 
+const icons = {
+  bolt: 'M9.2 1.5 3 9.4h4l-1.2 5.1L12 6.6H8l1.2-5.1Z',
+  cloud: 'M4.6 12.8a2.9 2.9 0 0 1-.2-5.8 4 4 0 0 1 7.6-1 3 3 0 0 1 .3 6H4.6Z',
+} as const
+
+function ChipIcon({ name }: { name: string }) {
+  return (
+    <span
+      className="grid place-items-center w-6 h-6 rounded-lg shrink-0"
+      style={{
+        backgroundColor: 'color-mix(in srgb, var(--accent-1) 16%, transparent)',
+        color: 'var(--accent-1)',
+      }}
+      aria-hidden="true"
+    >
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+        <path
+          d={icons[name as keyof typeof icons] ?? icons.bolt}
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  )
+}
+
 /**
- * The hero portrait. Warm-toned against the navy canvas, so it is framed with a
- * cyan/violet ring and a soft glow to tie it back to the palette rather than
- * letting it read as a foreign object dropped onto the page.
+ * The hero portrait. A slowly morphing organic mask inside a rotating
+ * conic-gradient ring, with two floating labels — warm amber against the dark
+ * canvas so the photo reads as part of the palette rather than a rectangle
+ * dropped onto it.
+ *
+ * `object-position` sits above centre on purpose: the blob is widest across
+ * the middle, so a centred crop clips the top of the head as the shape morphs.
  */
 export function Portrait() {
+  const [chipA, chipB] = profile.photoChips
+
   return (
     <div className="relative w-full max-w-[15.5rem] sm:max-w-[18rem] lg:max-w-none">
-      {/* Accent glow behind the frame. */}
+      {/* Accent glow behind the blob. */}
       <div
-        className="absolute -inset-6 rounded-[2rem] blur-2xl animate-drift"
+        className="absolute -inset-8 blur-3xl animate-drift"
         style={{
-          background: 'radial-gradient(circle at 60% 40%, var(--glow-a), transparent 70%)',
+          background: 'radial-gradient(circle at 55% 42%, var(--glow-a), transparent 70%)',
         }}
         aria-hidden="true"
       />
 
-      {/* Gradient ring — 1px of accent around the image. */}
-      <div
-        className="relative rounded-[1.35rem] p-px"
-        style={{
-          background:
-            'linear-gradient(150deg, var(--accent-1), transparent 45%, transparent 60%, var(--accent-2))',
-        }}
-      >
-        <picture>
-          <source
-            type="image/webp"
-            srcSet={`${profile.photo.webp640} 640w, ${profile.photo.webp960} 960w, ${profile.photo.webp1280} 1280w`}
-            sizes="(min-width: 1024px) 26rem, (min-width: 640px) 18rem, 15.5rem"
-          />
-          <img
-            src={profile.photo.jpg}
-            alt={`${profile.name}, ${profile.role}`}
-            width={1122}
-            height={1402}
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            className="block w-full h-auto rounded-[1.3rem] object-cover"
-            style={{ backgroundColor: 'var(--surface-raised)' }}
-          />
-        </picture>
+      <div className="photo-wrap">
+        <div className="photo-ring" aria-hidden="true" />
+        <div className="photo-inner">
+          <picture>
+            <source
+              type="image/webp"
+              srcSet={`${profile.photo.webp640} 640w, ${profile.photo.webp960} 960w, ${profile.photo.webp1280} 1280w`}
+              sizes="(min-width: 1024px) 26rem, (min-width: 640px) 18rem, 15.5rem"
+            />
+            <img
+              src={profile.photo.jpg}
+              alt={`${profile.name}, ${profile.role}`}
+              width={1122}
+              height={1402}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              className="block w-full h-full object-cover"
+              style={{ objectPosition: 'center 22%', backgroundColor: 'var(--surface-raised)' }}
+            />
+          </picture>
 
-        {/* Subtle inner vignette so the photo settles into the dark canvas. */}
-        <div
-          className="pointer-events-none absolute inset-px rounded-[1.3rem]"
-          style={{
-            background:
-              'linear-gradient(180deg, transparent 55%, color-mix(in srgb, var(--surface) 55%, transparent))',
-          }}
-          aria-hidden="true"
-        />
+          {/* Vignette so the photo settles into the canvas at its lower edge. */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(180deg, transparent 52%, color-mix(in srgb, var(--surface) 62%, transparent))',
+            }}
+            aria-hidden="true"
+          />
+        </div>
       </div>
 
-      {/* A node tag pinned to the frame, echoing the workflow canvas. */}
-      <div
-        className="absolute -bottom-4 -left-3 sm:-left-5 flex items-center gap-2 rounded-xl border px-3 py-2"
-        style={{
-          backgroundColor: 'var(--surface-raised)',
-          borderColor: 'var(--border-strong)',
-        }}
-      >
-        <span
-          className="w-2 h-2 rounded-full shrink-0"
-          style={{
-            background:
-              'linear-gradient(135deg, var(--accent-1), var(--accent-2))',
-          }}
-          aria-hidden="true"
-        />
-        <span className="font-mono text-[11.5px] tracking-tight text-secondary whitespace-nowrap">
-          Build · Solve · Scale
+      <div className="fchip fchip-a -left-2 top-8 sm:-left-6 sm:top-12">
+        <ChipIcon name={chipA.icon} />
+        <span className="leading-tight">
+          <span className="block font-mono text-[11px] tracking-[0.16em] uppercase text-muted">
+            {chipA.label}
+          </span>
+          <span className="block text-[13px] font-medium whitespace-nowrap">{chipA.value}</span>
+        </span>
+      </div>
+
+      <div className="fchip fchip-b -right-2 bottom-10 sm:-right-6 sm:bottom-14">
+        <ChipIcon name={chipB.icon} />
+        <span className="leading-tight">
+          <span className="block font-mono text-[11px] tracking-[0.16em] uppercase text-muted">
+            {chipB.label}
+          </span>
+          <span className="block text-[13px] font-medium whitespace-nowrap">{chipB.value}</span>
         </span>
       </div>
     </div>

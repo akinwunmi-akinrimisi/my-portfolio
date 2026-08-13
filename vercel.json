@@ -12,7 +12,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'sha256-u8DuHvw/0au3sGZ4m+WAmLS4wkdeOQu56jcPSh1WLdM=' 'sha256-sYShU4VaUPbiuXnPv3cBRN8yuUs10jFSFYDysyhwLGA='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; manifest-src 'self'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' 'sha256-PMmZ0q3cmU2MqMOrOobMW9aeaZ2RQD8LpK6LccMqDYM=' 'sha256-sYShU4VaUPbiuXnPv3cBRN8yuUs10jFSFYDysyhwLGA='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; manifest-src 'self'; upgrade-insecure-requests"
         },
         {
           "key": "Strict-Transport-Security",

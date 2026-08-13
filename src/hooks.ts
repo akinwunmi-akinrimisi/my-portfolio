@@ -73,6 +73,83 @@ export function useReveal<T extends HTMLElement>() {
   return ref
 }
 
+/**
+ * Drives the pinned project stack. Every `.stack-item` inside `ref` sticks at
+ * the same offset, so each card rides up and covers the one before it: the
+ * reader keeps scrolling while the page appears to hold still and the projects
+ * change in place. This hook only supplies the depth — the shrink applied to a
+ * card once it is buried.
+ *
+ * `scale = 1 - buried * STEP`, where `buried` counts how many cards have
+ * stacked on top so far, fractionally, so the shrink tracks the scroll rather
+ * than stepping when each card lands.
+ *
+ * Nothing here may be measured from a sticky element's own position. Both
+ * `getBoundingClientRect().top` and `offsetTop` report where a pinned card is
+ * *painted*, not where it sits in layout, so a pin computed from either one
+ * travels with the scroll, `y - pin` stays constant, and the shrink freezes —
+ * which is exactly what happened first time round. Pins are therefore built
+ * from the non-sticky container plus each card's layout height, neither of
+ * which the pinning or the scale can affect.
+ */
+const STACK_STEP = 0.018
+
+export function useScrollStack(ref: { current: HTMLElement | null }) {
+  useEffect(() => {
+    const root = ref.current
+    if (!root) return
+
+    const stack = root.querySelector<HTMLElement>('.stack')
+    const items = Array.from(root.querySelectorAll<HTMLElement>('.stack-item'))
+    if (!stack || items.length < 2) return
+    if (prefersReducedMotion()) return
+
+    const last = items.length - 1
+    let frame = 0
+
+    const update = () => {
+      frame = 0
+      // Re-measured every frame rather than cached: expanding a card's detail
+      // panel changes the pitch between pins, and a stale pin list would leave
+      // the shrink out of step with the scroll for the rest of the section.
+      const offset = parseFloat(getComputedStyle(items[0]).top) || 0
+      let cursor = stack.getBoundingClientRect().top + window.scrollY
+      const pins = items.map((el, i) => {
+        if (i > 0) cursor += parseFloat(getComputedStyle(el).marginTop) || 0
+        const pin = cursor - offset
+        cursor += el.offsetHeight
+        return pin
+      })
+      const y = window.scrollY
+
+      let buried = 0
+      for (let i = 0; i < last; i += 1) {
+        const span = pins[i + 1] - pins[i]
+        if (span > 0) buried += Math.max(0, Math.min((y - pins[i]) / span, 1))
+      }
+
+      items.forEach((el, i) => {
+        const depth = Math.min(Math.max(buried - i, 0), last - i)
+        el.style.setProperty('--stack-scale', (1 - depth * STACK_STEP).toFixed(4))
+      })
+    }
+
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update)
+    }
+
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+      cancelAnimationFrame(frame)
+      items.forEach((el) => el.style.removeProperty('--stack-scale'))
+    }
+  }, [ref])
+}
+
 /** Counts from zero to `target` once the element enters view. */
 export function useCountUp(target: number, durationMs = 1600) {
   const [value, setValue] = useState(0)

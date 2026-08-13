@@ -40,6 +40,7 @@ cd scripts && TARGET=https://akinwunmi-akinrimisi.netlify.app node mobile-audit.
 | `why.mjs` | Diagnoses *which* elements are unrevealed or overflowing, by selector. Use when a gate above fails. |
 | `marquee.mjs` | Samples the hero marquee transform over time to prove it is moving; checks card hover lift and spotlight vars. |
 | `light.mjs` | Computes WCAG contrast ratios for the accent tokens against the light canvas. |
+| `stack.mjs` | **Run after touching the work section, the portrait, or any `overflow` rule.** Proves the project cards really pin into a deck, that the shrink tracks the scroll, that every card's control is tappable while pinned at three viewport sizes, and that the portrait blob and ring are animating. |
 | `dup.mjs` | After prerendering, proves React replaced the baked markup instead of appending to it: counts `h1`, nav, cards, reveals. |
 | `csp-test.mjs` | **Run after any change adding a script, style, image source or external link.** Fails loudly on any CSP violation, console error, or third-party request. |
 | `scan-secrets.mjs` | Scans *staged* blobs for credentials. Runs automatically from `.githooks/pre-commit`; also `npm run scan`. |
@@ -81,3 +82,15 @@ This is not hydration. React still mounts with `createRoot` and replaces the mar
 - **Decorative blur glows inside `overflow-hidden` are flagged as overflow** by the
   audit's element sweep. `doc width vs vw` on the same line is the authoritative check —
   trust that, not the element list.
+- **Never measure a sticky element's position from itself.** Both `offsetTop` and
+  `getBoundingClientRect().top` report where a pinned element is *painted*, not where it
+  sits in layout. A scroll offset computed from either travels with the scroll, so
+  `scrollY - pin` stays constant and any scroll-driven value derived from it silently
+  freezes. Measure from a non-sticky container plus layout heights instead.
+- **`overflow` serialises as two values.** `getComputedStyle(el).overflow` on a element
+  with `overflow-x: clip` returns `"clip visible"`, which equals neither keyword. Check
+  `overflowX` and `overflowY` separately or the test invents a failure.
+- **`position: sticky` dies silently under `overflow: hidden` on any ancestor** — no
+  warning, no error, the element simply scrolls normally. `overflow-x: clip` stops
+  sideways overflow without creating a scroll container, so it is the one to use on
+  `body`. `stack.mjs` asserts this.

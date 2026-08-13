@@ -74,7 +74,13 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    overflow-x: hidden;
+    /*
+     * `clip`, not `hidden`. Both stop sideways overflow, but `hidden` turns the
+     * body into a scroll container, which silently cancels `position: sticky`
+     * for every descendant — and the pinned project stack depends on it. If the
+     * stack ever stops pinning, this line is the first place to look.
+     */
+    overflow-x: clip;
   }
 
   h1,
@@ -237,6 +243,127 @@
   }
 
   /*
+   * Hero portrait: an organic blob mask that slowly morphs, wrapped in a
+   * rotating conic-gradient ring, with two labels floating beside it.
+   *
+   * The ring and the mask must run the *same* morph animation, otherwise the
+   * gradient edge and the photo edge drift apart and the border thickness
+   * pulses. They are separate elements only because the ring rotates and the
+   * photo must not.
+   */
+  .photo-wrap {
+    position: relative;
+    aspect-ratio: 4 / 5;
+  }
+
+  .photo-ring {
+    position: absolute;
+    inset: -3px;
+    background: conic-gradient(
+      from 0deg,
+      var(--accent-1),
+      var(--accent-2),
+      #ffd166,
+      var(--accent-1)
+    );
+    border-radius: 40% 60% 55% 45% / 45% 45% 55% 55%;
+    animation:
+      blob-morph 9s ease-in-out infinite,
+      ring-spin 16s linear infinite;
+  }
+
+  .photo-inner {
+    position: absolute;
+    inset: 4px;
+    overflow: hidden;
+    background-color: var(--surface-sunken);
+    border-radius: 40% 60% 55% 45% / 45% 45% 55% 55%;
+    animation: blob-morph 9s ease-in-out infinite;
+  }
+
+  .fchip {
+    position: absolute;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 0.85rem;
+    background-color: color-mix(in srgb, var(--surface-raised) 88%, transparent);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 10px 28px -12px rgb(0 0 0 / 0.55);
+    animation: chip-float 4.5s ease-in-out infinite;
+  }
+
+  .fchip-b {
+    animation-delay: 0.6s;
+  }
+
+  /*
+   * The pinned project stack. Every item sticks at the same offset inside one
+   * shared parent, so as the reader scrolls each card rides up and covers the
+   * one before it — the page appears to hold still while the projects change
+   * in place. Later siblings paint over earlier ones by document order, which
+   * is exactly the deck order wanted, so no z-index is needed.
+   *
+   * Two things this depends on, both easy to break:
+   *   - `body` must use `overflow-x: clip`, never `hidden` (see above).
+   *   - the cards must stay opaque, or the buried ones show through the pile.
+   *
+   * Gated on `.js` so a crawler or a failed bundle gets five ordinary stacked
+   * cards rather than five overlapping ones.
+   */
+  .js .stack-item {
+    position: sticky;
+    top: 4.75rem;
+    transform: scale(var(--stack-scale, 1));
+    transform-origin: top center;
+    will-change: transform;
+  }
+
+  /*
+   * This gap is not decoration — it is how long a card stays fully readable.
+   * A pinned card is uncovered only until the next one's top edge reaches its
+   * bottom, so the window equals this margin. On a phone the cards nearly fill
+   * the viewport, which leaves the margin as the entire budget; a small gap
+   * there put the "How it was built" button under the following card almost as
+   * soon as it appeared.
+   */
+  .stack-item + .stack-item {
+    margin-top: 8rem;
+  }
+
+  /*
+   * A card taller than the viewport cannot be read while pinned — its lower
+   * half is parked below the fold with nowhere left to scroll. Expanding the
+   * detail panel is exactly what makes a card that tall, so an open card drops
+   * out of the stack and behaves like ordinary content until it is closed.
+   */
+  .js .stack-item:has([data-detail-open='true']) {
+    position: static;
+    transform: none;
+  }
+
+  @media (min-width: 640px) {
+    .js .stack-item {
+      top: 5.5rem;
+    }
+
+    .stack-item + .stack-item {
+      margin-top: 4rem;
+    }
+  }
+
+  /* Short viewports have no room to pin anything. Fall back to plain flow. */
+  @media (max-height: 620px) {
+    .js .stack-item {
+      position: static;
+      transform: none;
+    }
+  }
+
+  /*
    * Scroll-reveal is opt-in via the `js` class set before first paint. Without
    * JavaScript — crawlers, link previews, a failed bundle — content renders
    * visible instead of an empty page.
@@ -352,6 +479,44 @@
   }
 }
 
+/*
+ * The portrait blob. Four corner radii on each axis, rotated through four
+ * states, so the outline never repeats a shape long enough to read as a fixed
+ * mask. The eight values must stay balanced around 50% or the blob wanders off
+ * centre and clips the face.
+ */
+@keyframes blob-morph {
+  0%,
+  100% {
+    border-radius: 40% 60% 55% 45% / 45% 45% 55% 55%;
+  }
+  25% {
+    border-radius: 55% 45% 40% 60% / 55% 40% 60% 45%;
+  }
+  50% {
+    border-radius: 45% 55% 60% 40% / 40% 60% 45% 55%;
+  }
+  75% {
+    border-radius: 60% 40% 45% 55% / 55% 45% 40% 60%;
+  }
+}
+
+@keyframes ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes chip-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -9px, 0);
+  }
+}
+
 .animate-flow {
   animation: flow-dash 14s linear infinite;
 }
@@ -383,6 +548,11 @@
 
   .js .reveal {
     opacity: 1;
+    transform: none;
+  }
+
+  .js .stack-item {
+    position: static;
     transform: none;
   }
 }
