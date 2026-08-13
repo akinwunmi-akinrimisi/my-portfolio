@@ -1,9 +1,12 @@
 # Deploying a second copy to Vercel
 
 **Status: deployed 2026-08-13.**
-Live at <https://my-portfolio-jzjrwwmt7-akinwunmi-akinrimisis-projects.vercel.app> —
-serving all ten security headers, zero CSP violations, and `X-Robots-Tag: noindex,
-nofollow` so it does not compete with the Netlify copy in search.
+Live at <https://my-portfolio-tau-ten-zyq6uxser0.vercel.app> — serving all ten security
+headers, zero CSP violations, prerendered HTML byte-identical to the Netlify copy, and
+`X-Robots-Tag: noindex, nofollow` so it does not compete in search.
+
+**Use that stable domain.** The `my-portfolio-<hash>-…` URLs the CLI prints are
+per-deployment and change every time; they are not the address to share.
 
 Redeploy with:
 
@@ -11,7 +14,22 @@ Redeploy with:
 set -a && . ./.env && set +a
 npm run build
 npx vercel@latest deploy --prod --yes --archive=tgz --token "$VERCEL_TOKEN" ./dist
+node scripts/served.mjs        # confirms both hosts shipped real markup
 ```
+
+## Pushing to GitHub does NOT deploy this — on purpose
+
+`vercel.json` sets `git.deploymentEnabled.main = false`. Vercel's build image has no
+Chromium, so `npm run build` there skips prerendering (`prerender.mjs` degrades to a
+warning rather than failing, so CI still produces a valid build) and ships an empty
+`<div id="root">`. Worse, the git build landed roughly 70 seconds *after* each CLI
+deploy and took the production alias, so a verified artifact was silently replaced by a
+weaker one every time.
+
+Every browser-based check passes on that empty page, because the app mounts before
+anything is measured. `scripts/served.mjs` fetches raw bytes instead and is the gate.
+
+Re-enable git deploys only alongside a browser in the build image.
 
 (`VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` are in `.env`; the CLI reads them from the
 environment. Without them the CLI fails with a bare `Error: User not found.`)

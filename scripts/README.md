@@ -41,6 +41,7 @@ cd scripts && TARGET=https://akinwunmi-akinrimisi.netlify.app node mobile-audit.
 | `marquee.mjs` | Samples the hero marquee transform over time to prove it is moving; checks card hover lift and spotlight vars. |
 | `light.mjs` | Computes WCAG contrast ratios for the accent tokens against the light canvas. |
 | `stack.mjs` | **Run after touching the work section, the portrait, or any `overflow` rule.** Proves the project cards really pin into a deck, that the shrink tracks the scroll, that every card's control is tappable while pinned at three viewport sizes, and that the portrait blob and ring are animating. |
+| `served.mjs` | **Run after every deploy.** Fetches the raw bytes each host serves and fails if `#root` is empty. No browser — that is the point: every other check here fills `#root` in milliseconds and passes on an un-prerendered page. |
 | `spread.mjs` | **Run after touching the Cloud section.** Proves the capability cards start hidden *behind* their row's centre card, slide apart in step with the scroll, re-gather on the way back, and are left alone in the two-column layout. |
 | `dup.mjs` | After prerendering, proves React replaced the baked markup instead of appending to it: counts `h1`, nav, cards, reveals. |
 | `csp-test.mjs` | **Run after any change adding a script, style, image source or external link.** Fails loudly on any CSP violation, console error, or third-party request. |
@@ -91,6 +92,16 @@ This is not hydration. React still mounts with `createRoot` and replaces the mar
 - **`overflow` serialises as two values.** `getComputedStyle(el).overflow` on a element
   with `overflow-x: clip` returns `"clip visible"`, which equals neither keyword. Check
   `overflowX` and `overflowY` separately or the test invents a failure.
+- **A browser-based check cannot see a missing prerender.** The Vercel copy served an
+  empty `<div id="root">` while every gate in this directory was green, because each
+  one drives a browser and the app mounts before anything is measured. `served.mjs`
+  fetches raw bytes instead. Prove a new gate fails on the broken state before you
+  trust it passing.
+- **Vercel git auto-deploy is off** (`git.deploymentEnabled` in `vercel.json`) and must
+  stay off unless a browser is added to the build image. Vercel's builder has no
+  Chromium, `prerender.mjs` degrades to a warning rather than failing, and the git
+  build landed ~70s *after* each CLI deploy and took the production alias — silently
+  replacing a verified artifact with an un-prerendered one.
 - **A CSS transition turns a scroll-linked transform into a laggy one.** `.card-hover`
   transitions `transform` over 0.45s, which is right for a hover lift and wrong for
   anything driven by scroll — the element still arrives, just half a second after the
