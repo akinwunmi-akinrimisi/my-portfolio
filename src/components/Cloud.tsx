@@ -1,9 +1,10 @@
 import { capabilities, certifications } from '../content'
-import { useReveal } from '../hooks'
+import { useCardSpread, useReveal } from '../hooks'
 import { Chip, SectionHeading } from './primitives'
 
 export function Cloud() {
   const ref = useReveal<HTMLElement>()
+  useCardSpread(ref)
 
   return (
     <section
@@ -30,11 +31,17 @@ export function Cloud() {
           lead="Automation is only as trustworthy as the infrastructure carrying it. Five years of AWS, infrastructure as code and CI/CD is what lets me promise a workflow will still be running next quarter."
         />
 
-        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="spread-grid mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {/*
+            These are deliberately not `.reveal` targets. That class carries a
+            0.95s transform transition, which makes a scroll-linked slide lag a
+            full second behind the scroll, and its fade would hide the cards
+            during the very moment they emerge from the centre one.
+          */}
           {capabilities.map((cap) => (
             <article
               key={cap.title}
-              className="reveal reveal-scale card card-hover spotlight p-6 flex flex-col"
+              className="spread-card card card-hover spotlight p-6 flex flex-col"
             >
               <h3 className="text-lg font-semibold tracking-tight">{cap.title}</h3>
               <p className="mt-2 text-sm text-secondary leading-relaxed">{cap.summary}</p>

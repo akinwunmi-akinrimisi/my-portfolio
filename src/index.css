@@ -425,6 +425,44 @@
     filter: blur(0);
     clip-path: inset(0 0 0 0);
   }
+
+  /*
+   * Cards that slide out of their row's centre. Offsets arrive as custom
+   * properties from useCardSpread rather than as an inline `transform`, so the
+   * hover lift below can still compose with them — an inline transform would
+   * win outright and silently cancel it.
+   *
+   * With no hook running the fallbacks resolve to `translateX(0) scale(1)`, so
+   * a crawler, a reduced-motion reader and the two-column layout all get the
+   * card exactly where the grid put it.
+   */
+  .js .spread-card {
+    position: relative;
+    z-index: var(--spread-z, 1);
+    transform: translateX(var(--spread-x, 0px)) scale(var(--spread-s, 1));
+    will-change: transform;
+    /*
+     * `.card-hover` transitions transform over 0.45s, which is right for a
+     * hover lift and wrong for anything driven by the scroll — the cards still
+     * arrive, just half a second after the reader has moved on. Short enough
+     * here to smooth the per-frame steps without reading as lag; the colour and
+     * shadow transitions are left alone.
+     */
+    transition:
+      transform 0.12s linear,
+      border-color 0.45s ease,
+      box-shadow 0.45s ease;
+  }
+
+  /*
+   * Without this the hover lift disappears. `.js .spread-card` and
+   * `.card-hover:hover` are both (0,2,0), and this rule comes later in the
+   * file, so it would win the tie and drop the translateY. Restating the
+   * spread here keeps both.
+   */
+  .js .spread-card.card-hover:hover {
+    transform: translateX(var(--spread-x, 0px)) scale(var(--spread-s, 1)) translateY(-4px);
+  }
 }
 
 /* The travelling pulse along hero + project connectors. */

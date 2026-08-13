@@ -150,6 +150,98 @@ export function useScrollStack(ref: { current: HTMLElement | null }) {
   }, [ref])
 }
 
+/**
+ * Spreads a row of cards outward from its centre as the row scrolls up: the
+ * outer cards start stacked behind the middle one and slide apart, each toward
+ * its own side. Tied to scroll rather than fired once, so it re-gathers on the
+ * way back up.
+ *
+ * Only rows with an odd number of cards have a centre to emerge from, so a row
+ * of two or one is left alone — which is what the grid collapses to below the
+ * three-column breakpoint.
+ *
+ * Distances come from `offsetLeft`/`offsetTop` and the untransformed grid, not
+ * from the cards' own rects: `getBoundingClientRect` reports the *scaled* box,
+ * so a row's progress measured from a card it is already scaling would feed
+ * back into itself.
+ */
+export function useCardSpread(ref: { current: HTMLElement | null }) {
+  useEffect(() => {
+    const root = ref.current
+    if (!root) return
+
+    const grid = root.querySelector<HTMLElement>('.spread-grid')
+    const cards = Array.from(root.querySelectorAll<HTMLElement>('.spread-card'))
+    if (!grid || cards.length < 3) return
+
+    if (prefersReducedMotion()) return
+
+    let frame = 0
+
+    const update = () => {
+      frame = 0
+      const gridTop = grid.getBoundingClientRect().top
+      const base = cards[0].offsetTop
+      const viewport = window.innerHeight
+
+      // Regroup every frame: the breakpoint that decides how many cards share
+      // a row can change under a resize, and a row of two must be released
+      // rather than left holding the offsets from when it was a row of three.
+      const rows: HTMLElement[][] = []
+      cards.forEach((card) => {
+        const row = rows.find(([first]) => Math.abs(first.offsetTop - card.offsetTop) < 4)
+        if (row) row.push(card)
+        else rows.push([card])
+      })
+
+      rows.forEach((row) => {
+        const middle = row[(row.length - 1) / 2]
+        if (!middle) {
+          row.forEach((card) => {
+            card.style.removeProperty('--spread-x')
+            card.style.removeProperty('--spread-s')
+            card.style.removeProperty('--spread-z')
+          })
+          return
+        }
+
+        // Starts as the row's top edge reaches 90% down the viewport, finishes
+        // by the time it is 40% down — so it completes where it is being read.
+        const rowTop = gridTop + (row[0].offsetTop - base)
+        const progress = Math.max(0, Math.min((viewport * 0.9 - rowTop) / (viewport * 0.5), 1))
+        const eased = 1 - Math.pow(1 - progress, 3)
+
+        row.forEach((card) => {
+          const gap = middle.offsetLeft - card.offsetLeft
+          card.style.setProperty('--spread-x', `${(gap * (1 - eased)).toFixed(2)}px`)
+          card.style.setProperty('--spread-s', (0.94 + 0.06 * eased).toFixed(4))
+          // The centre card has to paint over the others or they emerge from
+          // in front of it rather than out of it.
+          card.style.setProperty('--spread-z', card === middle ? '2' : '1')
+        })
+      })
+    }
+
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update)
+    }
+
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+      cancelAnimationFrame(frame)
+      cards.forEach((card) => {
+        card.style.removeProperty('--spread-x')
+        card.style.removeProperty('--spread-s')
+        card.style.removeProperty('--spread-z')
+      })
+    }
+  }, [ref])
+}
+
 /** Counts from zero to `target` once the element enters view. */
 export function useCountUp(target: number, durationMs = 1600) {
   const [value, setValue] = useState(0)

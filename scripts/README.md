@@ -41,6 +41,7 @@ cd scripts && TARGET=https://akinwunmi-akinrimisi.netlify.app node mobile-audit.
 | `marquee.mjs` | Samples the hero marquee transform over time to prove it is moving; checks card hover lift and spotlight vars. |
 | `light.mjs` | Computes WCAG contrast ratios for the accent tokens against the light canvas. |
 | `stack.mjs` | **Run after touching the work section, the portrait, or any `overflow` rule.** Proves the project cards really pin into a deck, that the shrink tracks the scroll, that every card's control is tappable while pinned at three viewport sizes, and that the portrait blob and ring are animating. |
+| `spread.mjs` | **Run after touching the Cloud section.** Proves the capability cards start hidden *behind* their row's centre card, slide apart in step with the scroll, re-gather on the way back, and are left alone in the two-column layout. |
 | `dup.mjs` | After prerendering, proves React replaced the baked markup instead of appending to it: counts `h1`, nav, cards, reveals. |
 | `csp-test.mjs` | **Run after any change adding a script, style, image source or external link.** Fails loudly on any CSP violation, console error, or third-party request. |
 | `scan-secrets.mjs` | Scans *staged* blobs for credentials. Runs automatically from `.githooks/pre-commit`; also `npm run scan`. |
@@ -90,6 +91,13 @@ This is not hydration. React still mounts with `createRoot` and replaces the mar
 - **`overflow` serialises as two values.** `getComputedStyle(el).overflow` on a element
   with `overflow-x: clip` returns `"clip visible"`, which equals neither keyword. Check
   `overflowX` and `overflowY` separately or the test invents a failure.
+- **A CSS transition turns a scroll-linked transform into a laggy one.** `.card-hover`
+  transitions `transform` over 0.45s, which is right for a hover lift and wrong for
+  anything driven by scroll — the element still arrives, just half a second after the
+  reader moved on, and every before/after test passes. Sample the sweep and require the
+  value to track the scroll. Scroll-linked cards override it to 0.12s.
+- **`elementFromPoint` near the top of the viewport returns the fixed nav**, so an
+  occlusion check probing there reports every element as covered. Probe below ~140px.
 - **`position: sticky` dies silently under `overflow: hidden` on any ancestor** — no
   warning, no error, the element simply scrolls normally. `overflow-x: clip` stops
   sideways overflow without creating a scroll container, so it is the one to use on
