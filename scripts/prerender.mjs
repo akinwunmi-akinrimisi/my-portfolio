@@ -49,7 +49,25 @@ const server = createServer(async (req, res) => {
 
 await new Promise((resolve) => server.listen(PORT, resolve))
 
-const browser = await chromium.launch()
+/*
+ * A CI build container (Vercel's, for instance) has the playwright package but
+ * not the Chromium binary. Failing the whole build over a progressive
+ * enhancement would be the wrong trade — warn loudly and ship un-prerendered
+ * rather than shipping nothing.
+ */
+let browser
+try {
+  browser = await chromium.launch()
+} catch (err) {
+  console.warn('\n⚠️  Prerender SKIPPED — could not launch Chromium.')
+  console.warn(`   ${String(err).split('\n')[0]}`)
+  console.warn('   The build is valid but ships an empty #root, so crawlers that do')
+  console.warn('   not execute JavaScript will see no content.')
+  console.warn('   Fix on CI with: npx playwright install --with-deps chromium\n')
+  server.close()
+  process.exit(0)
+}
+
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
 const errors = []
 page.on('pageerror', (e) => errors.push(e.message))

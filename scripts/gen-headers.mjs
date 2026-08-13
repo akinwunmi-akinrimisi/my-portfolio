@@ -102,6 +102,11 @@ await writeFile(join(DIST, '_headers'), headers, 'utf8')
  * fails if the committed copy has drifted from what the build produces.
  */
 const securityHeaders = [
+  // The Vercel copy is a secondary deployment. Two indexable copies of the same
+  // site split ranking signals and let Google choose the canonical itself, which
+  // would undo the SEO work on the primary. Remove this header (and repoint the
+  // canonical/sitemap) only if Vercel becomes the primary host.
+  { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
   { key: 'Content-Security-Policy', value: csp },
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
   { key: 'X-Frame-Options', value: 'DENY' },
@@ -117,29 +122,45 @@ const securityHeaders = [
   },
 ]
 
-const vercelConfig = {
+const headerRules = [
+  { source: '/(.*)', headers: securityHeaders },
+  {
+    source: '/assets/(.*)',
+    headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+  },
+  {
+    source: '/fonts/(.*)',
+    headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+  },
+]
+
+const common = {
   $schema: 'https://openapi.vercel.sh/vercel.json',
+  cleanUrls: false,
+  trailingSlash: false,
+  headers: headerRules,
+}
+
+/*
+ * The two configs differ in exactly one respect, and it matters.
+ *
+ * The ROOT config describes how to build the repo, for a Vercel git-integration
+ * deployment. The DIST config must NOT carry buildCommand/outputDirectory: dist
+ * is uploaded as the deployment root by `vercel deploy ./dist`, and a build
+ * command there makes Vercel try to run `npm run build` inside a directory with
+ * no package.json — which fails with a bare exit code and no useful message.
+ */
+const rootConfig = {
+  ...common,
   buildCommand: 'npm run build',
   outputDirectory: 'dist',
   framework: null,
-  cleanUrls: false,
-  trailingSlash: false,
-  headers: [
-    { source: '/(.*)', headers: securityHeaders },
-    {
-      source: '/assets/(.*)',
-      headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
-    },
-    {
-      source: '/fonts/(.*)',
-      headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
-    },
-  ],
 }
+const distConfig = common
 
 const ROOT = new URL('../', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 const rootVercel = join(ROOT, 'vercel.json')
-const nextVercel = JSON.stringify(vercelConfig, null, 2) + '\n'
+const nextVercel = JSON.stringify(rootConfig, null, 2) + '\n'
 
 // --check exits non-zero if the committed vercel.json has drifted from what this
 // build produces, rather than silently deploying stale CSP hashes.
@@ -156,9 +177,14 @@ if (process.argv.includes('--check')) {
   }
   console.log('vercel.json is in sync with the current build.')
 } else {
+  // Written to both locations on purpose:
+  //   root  — read by a Vercel git-integration deployment before it builds
+  //   dist/ — read by `vercel deploy ./dist`, which uploads dist as the root
+  // Same content from the same generator, so the two cannot disagree.
   await writeFile(rootVercel, nextVercel, 'utf8')
+  await writeFile(join(DIST, 'vercel.json'), JSON.stringify(distConfig, null, 2) + '\n', 'utf8')
   console.log(
-    `Wrote dist/_headers and vercel.json with ${scriptHashes.length} inline-script hash(es)`,
+    `Wrote dist/_headers, vercel.json and dist/vercel.json with ${scriptHashes.length} inline-script hash(es)`,
   )
   scriptHashes.forEach((h) => console.log(`  ${h}`))
 }
