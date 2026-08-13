@@ -69,5 +69,10 @@
   ],
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": null
+  "framework": null,
+  "git": {
+    "deploymentEnabled": {
+      "main": false
+    }
+  }
 }

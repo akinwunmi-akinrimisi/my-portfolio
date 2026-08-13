@@ -155,6 +155,23 @@ const rootConfig = {
   buildCommand: 'npm run build',
   outputDirectory: 'dist',
   framework: null,
+  /*
+   * Auto-deploy on push is OFF, and this is the only thing keeping the Vercel
+   * copy's HTML real.
+   *
+   * `npm run build` prerenders by launching Chromium, and Vercel's build image
+   * has no browser — prerender.mjs degrades to a warning rather than failing,
+   * so a git build succeeds and quietly ships an empty `<div id="root">`. It
+   * also landed ~70 seconds AFTER each CLI deploy and took the production
+   * alias, so a build that passed every local gate was replaced by a weaker one
+   * every single time.
+   *
+   * Deploys are therefore CLI-driven from `dist`, exactly like Netlify: one
+   * prerendered artifact, verified before it goes out, served by both hosts.
+   * Re-enable this only alongside a browser in the build image, or the empty
+   * markup comes straight back.
+   */
+  git: { deploymentEnabled: { main: false } },
 }
 const distConfig = common
 
